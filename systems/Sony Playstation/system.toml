@@ -1,0 +1,51 @@
+# StickUI – PlayStation 1 system config
+# Folder: systems/PlayStation/
+# ============================================================
+
+[system]
+name               = "PlayStation"
+short_name         = "ps1"
+description        = "Sony PlayStation"
+logo               = "logo.png"
+background         = "background.jpg"
+stick              = "default"
+launchbox_platform = 'Sony PlayStation'
+
+[display]
+panel_color         = "#0d0d1a"
+stick_color         = "#1a1a2e"
+button_color        = "#555555"
+button_label_color  = "#ffffff"
+button_border_color = "#777777"
+
+[directions]
+up    = "Up"
+down  = "Down"
+left  = "Left"
+right = "Right"
+
+[buttons]
+# Arcade stick layout:
+# Top row:    △      □      L1     L2
+# Bottom row: ○      ✕      R1     R2
+# Meta:       Select Start
+select = "Select"
+start  = "Start"
+b1 = "△"
+b2 = "□"
+b3 = "L1"
+b4 = "L2"
+b5 = "○"
+b6 = "✕"
+b7 = "R1"
+b8 = "R2"
+
+[button_colors]
+b1 = { color = "#2e8b3e", border = "#4ab85e" }   # △ — Green
+b2 = { color = "#8b3a8b", border = "#cc66cc" }   # □ — Pink/Magenta
+b3 = { color = "#3a3a3a", border = "#666666" }   # L1 — Dark grey
+b4 = { color = "#2a2a2a", border = "#555555" }   # L2 — Darker grey
+b5 = { color = "#c0392b", border = "#e05040" }   # ○ — Red
+b6 = { color = "#2255aa", border = "#4488dd" }   # ✕ — Blue
+b7 = { color = "#3a3a3a", border = "#666666" }   # R1 — Dark grey
+b8 = { color = "#2a2a2a", border = "#555555" }   # R2 — Darker grey

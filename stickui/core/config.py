@@ -225,7 +225,12 @@ class ConfigLoader:
 
     @property
     def display(self) -> dict[str, Any]:
-        return self._merged.get("display", {})
+        # Priority: game [display] > system [display] > global [display]
+        global_display = self._global.get("display", {})
+        system_display = self._system_cfg.get("display", {})
+        game_display   = self._game_cfg.get("display", {})
+        merged = {**global_display, **system_display, **game_display}
+        return merged
 
     @property
     def buttons(self) -> dict[str, str]:
@@ -388,27 +393,28 @@ class ConfigLoader:
         return self.display.get("layout_style", "gamepad")
 
     @property
+    def unused_button_colors(self) -> dict:
+        """
+        Returns unused button color config.
+        Priority: game [display] > system [display] > config [display] > built-in
+        Already handled by self.display merge.
+        """
+        d = self.display
+        return {
+            "color":  d.get("unused_button_color",  "#2a2a2a"),
+            "border": d.get("unused_button_border", "#4a4a4a"),
+            "label":  d.get("unused_label_color",   "#505050"),
+        }
+
+    @property
     def background_dim(self) -> float:
         """
         Darkening overlay opacity for background images (0.0–1.0).
-        Priority: game.toml > system.toml > config.toml > default (0.55)
+        Priority: game [display] > system [display] > config [display] > 0.55
+        Already handled by self.display merge.
         """
-        # game.toml [display]
-        game_val = self._game_cfg.get("display", {}).get("background_dim")
-        if game_val is not None:
-            return max(0.0, min(1.0, float(game_val)))
-
-        # system.toml [display]
-        sys_val = self._system_cfg.get("display", {}).get("background_dim")
-        if sys_val is not None:
-            return max(0.0, min(1.0, float(sys_val)))
-
-        # config.toml [general]
-        global_val = self._global.get("general", {}).get("background_dim")
-        if global_val is not None:
-            return max(0.0, min(1.0, float(global_val)))
-
-        return 0.55   # default: moderate darkening
+        val = self.display.get("background_dim", 0.55)
+        return max(0.0, min(1.0, float(val)))
 
     @property
     def mame_cfg_dir(self) -> Path:

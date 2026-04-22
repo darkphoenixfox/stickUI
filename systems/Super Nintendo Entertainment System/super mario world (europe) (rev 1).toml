@@ -1,0 +1,34 @@
+[display]
+background_dim = 0.55
+
+[buttons]
+select = "Select"
+start = "Start"
+b1 = "Y"
+b2 = "X"
+b3 = "L"
+b4 = "R"
+b5 = "B"
+b6 = "A"
+b7 = "Unused"
+b8 = "Unused"
+
+[button_colors.select]
+color = "#3e3e3e"
+border = "#a3a3a3"
+
+[button_colors.start]
+color = "#3e3e3e"
+border = "#a3a3a3"
+
+[button_colors.b6]
+color = "#ff0000"
+border = "#ffb0b1"
+
+[button_colors.b7]
+color = "#e63946"
+border = "#ff6b6b"
+
+[button_colors.b8]
+color = "#e63946"
+border = "#ff6b6b"

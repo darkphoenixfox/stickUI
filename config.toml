@@ -1,11 +1,32 @@
 [general]
 xpos = 100
 ypos = 100
-width = 750
-height = 370
-opacity = 1.0
+width = 640
+height = 360
+opacity = 1
 auto_hide_seconds = 0
+unused_button_color = "#2a2a2a"
+unused_button_border = "#4a4a4a"
+unused_label_color = "#505050"
+
+[display]
+button_color = "#e63946"
+button_label_color = "#ffffff"
+button_border_color = "#ff6b6b"
+stick_color = "#2b2d42"
+panel_color = "#0d0d0d"
+logo_height = 100
+logo_y = 8
+logo_x = -1
+logo_margin = 12
+logo_opacity = 0.9
+show_system_name = true
+title_font_size = 14
+subtitle_font_size = 9
 background_dim = 0.75
+unused_button_color = "#2a2a2a"
+unused_button_border = "#4a4a4a"
+unused_label_color = "#505050"
 
 [paths]
 systems_dir = "./systems"

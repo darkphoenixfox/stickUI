@@ -1,0 +1,47 @@
+# StickUI – Neo Geo AES system config
+# Folder: systems/Neo Geo AES/
+# ============================================================
+
+[system]
+name               = "Neo Geo AES"
+short_name         = "neogeo"
+description        = "SNK Neo Geo AES"
+logo               = "logo.png"
+background         = "background.jpg"
+stick              = "default"
+launchbox_platform = 'SNK Neo Geo AES'
+
+[display]
+panel_color         = "#0a0a0a"
+stick_color         = "#1a0000"
+button_color        = "#cc0000"
+button_label_color  = "#ffffff"
+button_border_color = "#ff3333"
+
+[directions]
+up    = "Up"
+down  = "Down"
+left  = "Left"
+right = "Right"
+
+[buttons]
+# Neo Geo has 4 buttons: A B C D
+# Arcade stick layout:
+# Top row:    A      B      C      D
+# Bottom row: Unused Unused Unused Unused
+select = "Select"
+start  = "Start"
+b1 = "A"
+b2 = "B"
+b3 = "C"
+b4 = "D"
+b5 = "Unused"
+b6 = "Unused"
+b7 = "Unused"
+b8 = "Unused"
+
+[button_colors]
+b1 = { color = "#cc0000", border = "#ff4444" }
+b2 = { color = "#ccaa00", border = "#ffdd44" }
+b3 = { color = "#00aa44", border = "#44ff88" }
+b4 = { color = "#0044cc", border = "#4488ff" }

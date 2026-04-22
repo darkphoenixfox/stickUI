@@ -18,6 +18,7 @@ python -m stickui --system snes --stick myStick --width 700 --height 300
 - **Auto-reload** — edit any config file and the UI updates instantly, no restart needed
 - **Stick layout config** — define exact pixel positions for every button and direction arrow to match your physical cabinet
 - **Three-tier label system** — stick defines positions, system defines default labels, game overrides specific labels
+- **Edit mode** — click any button to edit its label, position, size, and colour live; save to `<game>.toml` with one click
 - **Smart label fitting** — labels auto-size inside buttons; multi-word labels word-wrap to 2 lines; falls back to initials + external label only when necessary
 - **Unused buttons** — set a label to `"Unused"` to render greyed out; `""` falls back to system default
 - **Cardinal direction arrows** — ▲ ◀ ▼ ▶ with custom labels when a game remaps directions
@@ -30,7 +31,7 @@ python -m stickui --system snes --stick myStick --width 700 --height 300
 - **short_name** — use a short alias (e.g. `--system mame`) even when the system folder has a long name (e.g. `Arcade`)
 - **Settings dialog** — corner button or right-click → Settings to adjust window size, position, opacity, auto-hide and background dim. Saves to the correct config file automatically
 - **Draggable** — left-click drag to reposition
-- **Right-click menu** — Settings, Copy Position, Reload Now, Quit
+- **Right-click menu** — Settings, Edit Layout, Copy Position, Reload Now, Quit
 - **ESC** to close
 
 ---
@@ -47,7 +48,7 @@ Python 3.11+ recommended (ships with `tomllib`). For Python 3.9/3.10:
 pip install -r requirements.txt tomli
 ```
 
-Optional — cleaner config writes from the settings dialog:
+Optional — cleaner config writes from the settings dialog and edit mode:
 
 ```bash
 pip install tomli-w
@@ -92,14 +93,19 @@ stickUI/                                        ← run from here
 │   │   ├── background.jpg
 │   │   ├── ffight.png                          ← per-game logo override
 │   │   └── sf2.toml                            ← per-game label overrides
-│   └── Super Nintendo Entertainment System/   ← matches LaunchBox platform name
-│       ├── system.toml                         ← short_name = "snes"
-│       ├── snes.png
-│       └── background.jpg
+│   ├── Super Nintendo Entertainment System/   ← matches LaunchBox platform name
+│   │   ├── system.toml                         ← short_name = "snes"
+│   │   ├── snes.png
+│   │   └── background.jpg
+│   ├── Sony Playstation/
+│   │   └── system.toml                         ← short_name = "psx"
+│   └── SNK Neo Geo AES/
+│       └── system.toml                         ← short_name = "neogeo"
 └── stickui/                                    ← Python package
     ├── __main__.py
     ├── core/
     │   ├── config.py
+    │   ├── game_writer.py                      ← saves edited layouts to <game>.toml
     │   ├── layout.py
     │   ├── launchbox.py
     │   ├── mame_cfg.py
@@ -109,10 +115,59 @@ stickUI/                                        ← run from here
     │   └── watcher.py
     └── ui/
         ├── background.py
+        ├── button_editor.py                    ← per-button edit dialog
         ├── panel.py
         ├── settings_dialog.py
         └── window.py
 ```
+
+---
+
+## Edit Mode
+
+Edit mode lets you adjust every button's label, position, size, and colour directly in the overlay — no manual TOML editing required.
+
+### Opening edit mode
+
+- Click the **pencil button** (bottom-left corner of the overlay), or
+- Right-click → **✏️ Edit Layout**
+
+An edit bar appears at the top of the overlay:
+
+```
+✏  Edit Mode — click any button to edit    [💾 Save]  [↩ Revert]  [Done]
+```
+
+### Editing a button
+
+Click any button or direction arrow to open the **Button Editor** dialog:
+
+| Field | Description |
+|---|---|
+| **Label** | Text shown inside the button. Use `\n` to force a two-line split |
+| **Symbol picker** | Quick-insert PS shapes (△□○✕), arrows (▲▼◀▶), and common symbols |
+| **Mark as Unused** | Greys out the button immediately |
+| **Size** | Button diameter in pixels. Steps by 2px |
+| **X / Y** | Position relative to the top-left of the overlay window |
+| **Colour / Border** | Fill and border colour (buttons only). Click to open colour picker |
+| **Copy Style** | Copies the current size and colours to a clipboard |
+| **Apply Style** | Pastes the copied size and colours onto this button |
+
+- **Apply** — writes changes to the slot and repaints the overlay live; flashes green on success
+- **Revert** — restores the button to its state when the dialog was opened
+- **Close** — closes the dialog without saving to disk
+
+### Saving and reverting
+
+Changes accumulate in memory until you explicitly save or revert.
+
+| Button | Action |
+|---|---|
+| **💾 Save** | Writes the current layout to `systems/<s>/<game>.toml`. Only values that differ from system defaults are written, keeping the file minimal. |
+| **↩ Revert** | Discards all unsaved edits and reloads from disk |
+| **Done** | Exits edit mode without saving |
+
+> **Note:** Save creates or replaces `[buttons]`, `[directions]`, and `[button_colors]` sections while preserving any existing `[game]` and `[display]` sections.
 
 ---
 
@@ -478,6 +533,8 @@ Force a reload via right-click → **🔄 Reload Now**.
 | Move window | Left-click drag |
 | Close | ESC |
 | Open settings | Click bottom-right corner, or right-click → Settings |
+| Toggle edit mode | Click bottom-left corner (pencil), or right-click → Edit Layout |
+| Edit a button | Enter edit mode, then click the button |
 | Copy window position | Right-click → Copy Position |
 | Force reload | Right-click → Reload Now |
 | Quit | Right-click → Quit |
@@ -506,5 +563,5 @@ Force a reload via right-click → **🔄 Reload Now**.
 | PyQt6 | ≥ 6.4 | Borderless window, QPainter, file watcher |
 | tomllib | built-in | TOML parsing (Python 3.11+) |
 | tomli | ≥ 2.0 | TOML parsing for Python < 3.11 |
-| tomli-w | ≥ 1.0 | Clean config writes from settings dialog (optional) |
+| tomli-w | ≥ 1.0 | Clean config writes from settings dialog and edit mode (optional) |
 | Pillow | ≥ 10.0 | Image loading (optional) |

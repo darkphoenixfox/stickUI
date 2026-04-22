@@ -44,6 +44,9 @@ class LayoutResult:
     button_label_color: str = "#ffffff"
     button_border_color: str = "#ff6b6b"
     stick_color: str = "#2b2d42"
+    unused_color: str = "#2a2a2a"
+    unused_border: str = "#4a4a4a"
+    unused_label: str = "#505050"
 
 
 _ARCADE_6_POSITIONS: Dict[str, Tuple[int, int]] = {
@@ -129,18 +132,28 @@ class LayoutResolver:
 
         button_list.sort(key=lambda b: (b.row, b.col))
 
-        # Resolve game title from mame.dat if available and no toml override
-        game_name = cfg.game_name
-        if (
-            cfg.system == "mame"
-            and cfg.game
-            and not cfg._game_cfg.get("game", {}).get("name")
-            and cfg.mame_dat_path
-        ):
-            info = mame_dat_lookup(cfg.game, cfg.mame_dat_path)
-            if info:
-                game_name = info.description
+        # Resolve game title: game.toml > LaunchBox XML > mame.dat > rom name
+        game_name = cfg.game_name   # from game.toml [game] name if set
 
+        if cfg.game and not cfg._game_cfg.get("game", {}).get("name"):
+            # Try LaunchBox XML first
+            lb = cfg.launchbox_platform
+            if lb:
+                try:
+                    from .launchbox import get_title
+                    lb_title = get_title(lb, cfg.game)
+                    if lb_title:
+                        game_name = lb_title
+                except Exception:
+                    pass
+
+            # Fall back to mame.dat
+            if not game_name and cfg.mame_dat_path:
+                info = mame_dat_lookup(cfg.game, cfg.mame_dat_path)
+                if info:
+                    game_name = info.description
+
+        unused = cfg.unused_button_colors
         return LayoutResult(
             system_name=cfg.system_name,
             game_name=game_name,
@@ -153,4 +166,7 @@ class LayoutResolver:
             button_label_color=display.get("button_label_color", "#ffffff"),
             button_border_color=display.get("button_border_color", "#ff6b6b"),
             stick_color=display.get("stick_color", "#2b2d42"),
+            unused_color=unused["color"],
+            unused_border=unused["border"],
+            unused_label=unused["label"],
         )

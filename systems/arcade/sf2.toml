@@ -1,0 +1,30 @@
+[display]
+background_dim = 0.6
+
+[buttons]
+select = "Insert Coin"
+start = "1P Start"
+b1 = "Weak Punch"
+b2 = "Medium Punch"
+b3 = "Strong Punch"
+b4 = "Unused"
+b5 = "Weak Kick"
+b6 = "Medium Kick"
+b7 = "Strong Kick"
+b8 = "Unused"
+
+[button_colors.b4]
+color = "#e63946"
+border = "#ff6b6b"
+
+[button_colors.b5]
+color = "#0000ff"
+border = "#55aaff"
+
+[button_colors.b6]
+color = "#0000ff"
+border = "#55aaff"
+
+[button_colors.b7]
+color = "#0000ff"
+border = "#55aaff"

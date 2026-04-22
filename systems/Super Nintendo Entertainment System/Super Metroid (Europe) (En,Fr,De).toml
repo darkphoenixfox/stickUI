@@ -1,0 +1,37 @@
+# StickUI – Per-game config for Super Metroid (SNES)
+# ROM: Super Metroid (Europe) (En,Fr,De)
+# Source: in-game Controller Setting Mode screen
+# ============================================================
+
+[game]
+name = "Super Metroid"
+
+[buttons]
+# Top row:    Y      X      L        R
+# Bottom row: B      A      Select   —
+#
+# Y = Shot
+# X = Jump
+# B = Dash
+# A = Item Cancel
+# L = Angle Up
+# R = Angle Down
+# Select = Item Select
+# Start  = Pause / Map
+
+b1 = "Shot"
+b2 = "Jump"
+b3 = "Angle\nUp"
+b4 = "Angle\nDown"
+b5 = "Dash"
+b6 = "Item\nCancel"
+b7 = "Unused"
+b8 = "Unused"
+select = "Item\nSelect"
+start  = "Pause"
+
+[directions]
+up    = "Up / Aim"
+down  = "Down / Crouch"
+left  = "Walk Left"
+right = "Walk Right"
