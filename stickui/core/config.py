@@ -222,32 +222,58 @@ class ConfigLoader:
         Returns the best available logo path.
 
         Priority:
-          1. game.toml [game] logo = "..."
-          2. <game>.png  (implicit, same name as rom)
-          3. system.toml [system] logo = "..."
-          4. logo.png    (generic fallback filename)
-          5. <system>.png (e.g. mame.png, snes.png)
+          1. game.toml [game] logo = "..."  (explicit override)
+          2. logos_dir recursive search: <game>.png / <game>-01.png
+             (Launchbox naming, under system.toml [system] logos_dir)
+          3. <game>.png in the system folder
+          4. system.toml [system] logo = "..."
+          5. logo.png in the system folder
+          6. <s>.png (e.g. mame.png, snes.png)
         """
-        # 1 & 2 — game-level
+        # 1 — explicit game.toml override
         if self.game:
-            game_logo_name = self._game_cfg.get("game", {}).get("logo", f"{self.game}.png")
-            p = self.system_dir / game_logo_name
+            game_logo_name = self._game_cfg.get("game", {}).get("logo")
+            if game_logo_name:
+                p = self.system_dir / game_logo_name
+                if p.is_file():
+                    return p
+
+        # 2 — logos_dir recursive search (Launchbox style)
+        if self.game:
+            logos_dir_str = self._system_cfg.get("system", {}).get("logos_dir", "")
+            if logos_dir_str:
+                logos_dir = Path(logos_dir_str).expanduser()
+                if logos_dir.is_dir():
+                    stems_lower = {
+                        self.game.lower(),
+                        f"{self.game.lower()}-01",
+                        f"{self.game.lower()}-02",
+                    }
+                    exts = {".png", ".jpg", ".jpeg"}
+                    for p in sorted(logos_dir.rglob("*")):
+                        if p.is_file() and p.suffix.lower() in exts:
+                            if p.stem.lower() in stems_lower:
+                                return p
+
+        # 3 — <game>.png in system folder
+        if self.game:
+            p = self.system_dir / f"{self.game}.png"
             if p.is_file():
                 return p
 
-        # 3 — explicit system logo from system.toml
+        # 4 — explicit system logo
         sys_logo_name = self._system_cfg.get("system", {}).get("logo")
         if sys_logo_name:
             p = self.system_dir / sys_logo_name
             if p.is_file():
                 return p
 
-        # 4 — generic logo.png
+        # 5 — generic logo.png
         p = self.system_dir / "logo.png"
         if p.is_file():
             return p
 
-        # 5 — <system>.png (e.g. mame.png, snes.png)
+        # 6 — <s>.png (e.g. mame.png, snes.png)
         p = self.system_dir / f"{self.system}.png"
         if p.is_file():
             return p
@@ -306,3 +332,21 @@ class ConfigLoader:
         return Path(
             self._global["paths"].get("mame_cfg_dir", "~/.mame/cfg")
         ).expanduser()
+
+    @property
+    def mame_dat_path(self) -> Path | None:
+        """Path to mame.dat / mame.xml, or None if not configured."""
+        val = self._global["paths"].get("mame_dat", "")
+        if not val:
+            return None
+        p = Path(val).expanduser()
+        return p if p.is_file() else None
+
+    @property
+    def command_dat_path(self) -> Path | None:
+        """Path to command.dat, or None if not configured."""
+        val = self._global["paths"].get("command_dat", "")
+        if not val:
+            return None
+        p = Path(val).expanduser()
+        return p if p.is_file() else None

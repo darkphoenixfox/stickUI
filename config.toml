@@ -10,3 +10,9 @@ auto_hide_seconds = 0
 systems_dir = "./systems"
 mame_cfg_dir = "d:/mame/cfg"
 mame_ctrlr_dir = "d:/mame/ctrlr"
+
+# Path to MAME's XML data file
+mame_dat = "d:/mame/dats/mame.dat"
+
+# Path to command.dat (MAME move list / button name database)
+command_dat = "d:/mame/dats/command.dat"

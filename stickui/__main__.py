@@ -48,10 +48,12 @@ def build(args: argparse.Namespace, cli_args: dict):
         or cfg._system_cfg.get("system", {}).get("stick", "default")
     )
     stick_layout = load_stick_layout(
-        stick_name = stick_name,
-        sticks_dir = Path("sticks"),
-        system_cfg = cfg._system_cfg,
-        game_cfg   = cfg._game_cfg,
+        stick_name  = stick_name,
+        sticks_dir  = Path("sticks"),
+        system_cfg  = cfg._system_cfg,
+        game_cfg    = cfg._game_cfg,
+        rom_name    = args.game if args.system.lower() == "mame" else None,
+        command_dat = cfg.command_dat_path,
     )
     return cfg, layout, stick_layout
 

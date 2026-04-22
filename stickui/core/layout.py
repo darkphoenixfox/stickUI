@@ -18,6 +18,7 @@ from typing import Dict, List, Optional, Tuple
 
 from .config import ConfigLoader
 from .mame_parser import find_mame_cfg, parse_mame_cfg
+from .mame_dat import lookup as mame_dat_lookup
 
 
 @dataclass
@@ -128,9 +129,21 @@ class LayoutResolver:
 
         button_list.sort(key=lambda b: (b.row, b.col))
 
+        # Resolve game title from mame.dat if available and no toml override
+        game_name = cfg.game_name
+        if (
+            cfg.system == "mame"
+            and cfg.game
+            and not cfg._game_cfg.get("game", {}).get("name")
+            and cfg.mame_dat_path
+        ):
+            info = mame_dat_lookup(cfg.game, cfg.mame_dat_path)
+            if info:
+                game_name = info.description
+
         return LayoutResult(
             system_name=cfg.system_name,
-            game_name=cfg.game_name,
+            game_name=game_name,
             style=style,
             buttons=button_list,
             logo_path=cfg.logo_path,

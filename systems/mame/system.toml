@@ -1,58 +1,56 @@
-# ControlPad – System configuration for MAME
-# Place this file at: <systems_dir>/mame/system.toml
+# StickUI – System configuration for MAME
 # ============================================================
 
 [system]
 name        = "MAME"
 description = "Multiple Arcade Machine Emulator"
-
-# Optional assets (relative to this file's directory)
-logo        = "logo.png"          # shown in corner when no game logo present
-background  = "background.png"    # window background image
+logo        = "logo.png"
+background  = "background.png"
+stick       = "default"
+logos_dir   = "D:/Launchbox/Clear Logo"         # path to folder containing game logo images
 
 [display]
-# Layout style: "arcade", "gamepad", "keyboard", "custom"
-layout_style = "arcade"
-logo_height  = 128     # how tall to scale it
-logo_y       = 8      # px from top of window
-logo_x       = -1     # -1 = auto right-align, or set explicit px from left
-logo_margin  = 12     # margin used when auto right-aligning
-logo_opacity = 0.9    # 0.0 – 1.0
-show_system_name  = true    # show system name as subtitle below game name
-title_font_size   = 14      # px
-subtitle_font_size = 9      # px
-
-# Button shape: "circle", "square", "rounded"
-button_shape = "circle"
-
-# Colour theme for this system's buttons
 button_color        = "#e63946"
 button_label_color  = "#ffffff"
 button_border_color = "#ff6b6b"
 stick_color         = "#2b2d42"
 panel_color         = "#0d0d0d"
+logo_height         = 128
+logo_y              = 8
+logo_x              = -1
+logo_margin         = 12
+logo_opacity        = 0.9
+show_system_name    = true
+title_font_size     = 14
+subtitle_font_size  = 9
 
-[defaults]
-# Default button labels when no game-specific mapping is found.
-# Keys follow MAME's naming convention.
-# These are fallbacks – per-game files will override them.
+[directions]
+up    = "Up"
+down  = "Down"
+left  = "Left"
+right = "Right"
 
-[defaults.buttons]
-"BUTTON1" = "A"
-"BUTTON2" = "B"
-"BUTTON3" = "C"
-"BUTTON4" = "X"
-"BUTTON5" = "Y"
-"BUTTON6" = "Z"
-"START1"  = "1P Start"
-"COIN1"   = "Insert Coin"
+# Default button labels — overridden per game
+[buttons]
+b1     = "A"
+b2     = "B"
+b3     = "C"
+b4     = "X"
+b5     = "Y"
+b6     = "Z"
+b7     = "D"
+b8     = "E"
+select = "Insert Coin"
+start  = "1P Start"
 
-[defaults.axes]
-"JOYSTICK_LEFT_UP"    = "Up"
-"JOYSTICK_LEFT_DOWN"  = "Down"
-"JOYSTICK_LEFT_LEFT"  = "Left"
-"JOYSTICK_LEFT_RIGHT" = "Right"
-
-[paths]
-# If you use a global MAME ctrlr file for this system, name it here
-ctrlr_file = ""
+# ── command.dat button mapping ──────────────────────────────
+# Maps command.dat abbreviations to stick slot ids (b1–b8).
+# Used when no per-game toml exists and command.dat is configured.
+# This is the standard 6-button fighter layout.
+[command_dat_map]
+LP = "b1"
+MP = "b2"
+HP = "b3"
+LK = "b5"
+MK = "b6"
+HK = "b7"

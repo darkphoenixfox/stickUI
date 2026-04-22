@@ -24,13 +24,13 @@ author      = ""
 id   = "select"
 x    = 80
 y    = 40
-size = 34
+size = 48
 
 [[buttons]]
 id   = "start"
 x    = 140
 y    = 40
-size = 34
+size = 48
 
 # ── Directional inputs ──────────────────────────────────────
 
@@ -100,5 +100,5 @@ y    = 210
 
 # ── Display ─────────────────────────────────────────────────
 [display]
-arrow_size   = 34
-button_size  = 52
+arrow_size   = 39
+button_size  = 64
