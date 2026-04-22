@@ -1,22 +1,11 @@
 """
 stickui.ui.window
 ~~~~~~~~~~~~~~~~~
-Borderless, always-on-top overlay window.
-
-Reloads automatically when any config file is modified on disk.
-
-Logo config (in system.toml or game.toml [display]):
-  logo_height   = 48
-  logo_x        = -1    # -1 = auto right-align
-  logo_y        = 8
-  logo_margin   = 12
-  logo_opacity  = 0.9
-
-Header config:
-  show_title         = true
-  show_system_name   = true
-  title_font_size    = 14
-  subtitle_font_size = 9
+Borderless overlay window with:
+- Cover-scaled background image
+- Floating logo overlay
+- Invisible settings button in bottom-right corner
+- Auto-reload on config file changes
 """
 
 from __future__ import annotations
@@ -28,14 +17,20 @@ from PyQt6.QtCore import Qt, QPoint, QTimer
 from PyQt6.QtGui import QColor, QKeySequence, QPixmap, QShortcut
 from PyQt6.QtWidgets import (
     QApplication, QHBoxLayout, QLabel, QMainWindow,
-    QMenu, QVBoxLayout, QWidget,
+    QMenu, QPushButton, QVBoxLayout, QWidget,
 )
 
 from ..core.config import ConfigLoader
 from ..core.layout import LayoutResult
 from ..core.stick import StickLayout
 from ..core.watcher import ConfigWatcher, watched_paths
+from .background import BackgroundWidget
 from .panel import ControlPanel
+from .settings_dialog import SettingsDialog
+
+
+# Size of the invisible corner hit area in pixels
+_CORNER_BTN_SIZE = 20
 
 
 class OverlayWindow(QMainWindow):
@@ -59,6 +54,7 @@ class OverlayWindow(QMainWindow):
         self._lr  = layout_result
         self._reload_callback = reload_callback
         self._logo_label: Optional[QLabel] = None
+        self._corner_btn: Optional[QPushButton] = None
 
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint
@@ -70,16 +66,14 @@ class OverlayWindow(QMainWindow):
         self.setGeometry(x, y, width, height)
         self.setMinimumSize(300, 150)
 
-        self._central = QWidget(self)
-        self._central.setObjectName("centralWidget")
-        self.setCentralWidget(self._central)
+        self._bg = BackgroundWidget(self)
+        self._bg.setObjectName("centralWidget")
+        self.setCentralWidget(self._bg)
 
         self._build_ui(layout_result, stick_layout)
 
-        # ── File watcher ───────────────────────────────────────────────────
         self._watcher = self._setup_watcher(cfg)
 
-        # ── Shortcuts & context menu ───────────────────────────────────────
         QShortcut(QKeySequence(Qt.Key.Key_Escape), self, QApplication.quit)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_context_menu)
@@ -94,20 +88,22 @@ class OverlayWindow(QMainWindow):
         lr: LayoutResult,
         stick_layout: Optional[StickLayout] = None,
     ) -> None:
-        """Construct (or reconstruct) all child widgets."""
-        # Clear existing layout and widgets
-        if self._central.layout():
-            # Remove all children
-            while self._central.layout().count():
-                item = self._central.layout().takeAt(0)
+        if self._bg.layout():
+            while self._bg.layout().count():
+                item = self._bg.layout().takeAt(0)
                 if item.widget():
                     item.widget().deleteLater()
-            QWidget().setLayout(self._central.layout())
+            QWidget().setLayout(self._bg.layout())
 
-        self._logo_label = None
-        self._apply_background(lr)
+        self._logo_label  = None
+        self._corner_btn  = None
 
-        root = QVBoxLayout(self._central)
+        bg_path = str(lr.background_path) if lr.background_path else None
+        self._bg.set_image(bg_path)
+        self._bg.set_panel_color(lr.panel_color)
+        self._bg.setStyleSheet("QWidget#centralWidget { border-radius: 14px; }")
+
+        root = QVBoxLayout(self._bg)
         root.setContentsMargins(12, 10, 12, 10)
         root.setSpacing(4)
 
@@ -119,6 +115,7 @@ class OverlayWindow(QMainWindow):
         root.addWidget(panel, stretch=1)
 
         self._place_logo(lr)
+        self._place_corner_btn()
 
     def reload(
         self,
@@ -126,15 +123,76 @@ class OverlayWindow(QMainWindow):
         cfg: ConfigLoader,
         stick_layout: Optional[StickLayout] = None,
     ) -> None:
-        """Called by __main__ after re-parsing configs on file change."""
         self._cfg = cfg
         self._lr  = layout_result
         self._build_ui(layout_result, stick_layout)
-        # Update watcher paths in case files were added/removed
         self._watcher.set_paths(self._config_paths(cfg))
+
+        win = cfg.window
+        g = self.geometry()
+        self.setGeometry(
+            win.get("xpos",   g.x()),
+            win.get("ypos",   g.y()),
+            win.get("width",  g.width()),
+            win.get("height", g.height()),
+        )
+        self.setWindowOpacity(win.get("opacity", self.windowOpacity()))
         self.update()
 
-    # ── File watcher setup ──────────────────────────────────────────────────
+    # ── Invisible corner settings button ────────────────────────────────────
+
+    def _place_corner_btn(self) -> None:
+        s = _CORNER_BTN_SIZE
+        btn = QPushButton("", self._bg)
+        btn.setFixedSize(s, s)
+        btn.setCursor(Qt.CursorShape.SizeAllCursor)
+        btn.setToolTip("Settings")
+        btn.setStyleSheet(
+            "QPushButton {"
+            "  background: transparent;"
+            "  border: none;"
+            "}"
+            "QPushButton:hover {"
+            f" background: rgba(255,255,255,0.08);"
+            "  border-radius: 4px;"
+            "}"
+        )
+        btn.clicked.connect(self._open_settings)
+        self._corner_btn = btn
+        self._reposition_corner_btn()
+        btn.raise_()
+        btn.show()
+
+    def _reposition_corner_btn(self) -> None:
+        if self._corner_btn:
+            s = _CORNER_BTN_SIZE
+            self._corner_btn.move(
+                self._bg.width()  - s - 4,
+                self._bg.height() - s - 4,
+            )
+
+    def _open_settings(self) -> None:
+        def on_apply(values: dict) -> None:
+            # Apply immediately to the live window
+            self.setGeometry(
+                values["xpos"], values["ypos"],
+                values["width"], values["height"],
+            )
+            self.setWindowOpacity(values["opacity"])
+            # Trigger a full reload so the watcher picks up the new config
+            if self._reload_callback:
+                self._reload_callback()
+
+        dlg = SettingsDialog(
+            config_path      = self._cfg.global_config_path,
+            current_geometry = self.geometry(),
+            current_opacity  = self.windowOpacity(),
+            on_apply         = on_apply,
+            parent           = self,
+        )
+        dlg.exec()
+
+    # ── File watcher ────────────────────────────────────────────────────────
 
     def _config_paths(self, cfg: ConfigLoader):
         game_toml  = (cfg.system_dir_path / f"{cfg.game}.toml") if cfg.game else None
@@ -153,42 +211,21 @@ class OverlayWindow(QMainWindow):
         return watcher
 
     def _on_config_changed(self) -> None:
-        """Debounce rapid saves (editors often write multiple times)."""
         if hasattr(self, "_reload_timer"):
             self._reload_timer.stop()
         self._reload_timer = QTimer(self)
         self._reload_timer.setSingleShot(True)
         self._reload_timer.timeout.connect(self._trigger_reload)
-        self._reload_timer.start(300)   # wait 300ms after last change
+        self._reload_timer.start(300)
 
     def _trigger_reload(self) -> None:
         if self._reload_callback:
             self._reload_callback()
 
-    # ── Background ──────────────────────────────────────────────────────────
-
-    def _apply_background(self, lr: LayoutResult) -> None:
-        if lr.background_path and lr.background_path.is_file():
-            bg = str(lr.background_path).replace("\\", "/")
-            self._central.setStyleSheet(
-                f'#centralWidget {{'
-                f'background-image: url("{bg}"); background-repeat: no-repeat;'
-                f'background-position: center; border-radius: 14px;}}'
-            )
-        else:
-            c = QColor(lr.panel_color)
-            lighter = c.lighter(140).name()
-            self._central.setStyleSheet(
-                f'#centralWidget {{background: qlineargradient('
-                f'x1:0,y1:0,x2:1,y2:1,stop:0 {lighter},stop:1 {lr.panel_color});'
-                f'border-radius: 14px; border: 1px solid rgba(255,255,255,0.08);}}'
-            )
-
     # ── Header ──────────────────────────────────────────────────────────────
 
     def _build_header(self, lr: LayoutResult) -> Optional[QWidget]:
         display = self._cfg.display
-
         if not display.get("show_title", True):
             return None
 
@@ -250,7 +287,7 @@ class OverlayWindow(QMainWindow):
             logo_height, Qt.TransformationMode.SmoothTransformation
         )
 
-        lbl = QLabel(self._central)
+        lbl = QLabel(self._bg)
         lbl.setPixmap(pix)
         lbl.setStyleSheet("background: transparent;")
         lbl.setFixedSize(pix.width(), pix.height())
@@ -261,8 +298,11 @@ class OverlayWindow(QMainWindow):
         lbl.show()
         self._logo_label = lbl
 
+    # ── Resize ──────────────────────────────────────────────────────────────
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        # Reposition auto-aligned logo
         if self._logo_label:
             display     = self._cfg.display
             logo_x_cfg  = int(display.get("logo_x", -1))
@@ -271,6 +311,8 @@ class OverlayWindow(QMainWindow):
             if logo_x_cfg < 0:
                 lx = self.width() - self._logo_label.width() - logo_margin
                 self._logo_label.move(lx, logo_y)
+        # Reposition corner button
+        self._reposition_corner_btn()
 
     # ── Drag ────────────────────────────────────────────────────────────────
 
@@ -300,13 +342,16 @@ class OverlayWindow(QMainWindow):
             "border-radius:6px; padding:4px;}"
             "QMenu::item:selected {background:#333; border-radius:4px;}"
         )
-        action_pos  = menu.addAction("📋  Copy Position")
-        action_reload = menu.addAction("🔄  Reload Now")
+        action_settings = menu.addAction("⚙️  Settings")
+        action_pos      = menu.addAction("📋  Copy Position")
+        action_reload   = menu.addAction("🔄  Reload Now")
         menu.addSeparator()
-        action_quit = menu.addAction("✕  Quit")
+        action_quit     = menu.addAction("✕  Quit")
 
         chosen = menu.exec(self.mapToGlobal(pos))
-        if chosen == action_pos:
+        if chosen == action_settings:
+            self._open_settings()
+        elif chosen == action_pos:
             g = self.geometry()
             QApplication.clipboard().setText(
                 f"--xpos {g.x()} --ypos {g.y()} "

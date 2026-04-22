@@ -256,22 +256,35 @@ class ConfigLoader:
 
     @property
     def background_path(self) -> Path | None:
-        """Returns background image path (game bg > system bg > None)."""
+        """
+        Returns background image path (game bg > system bg > None).
+        Supports .png, .jpg, .jpeg — explicit config value is tried first,
+        then each extension is tried automatically if no config value given.
+        """
+        _exts = (".png", ".jpg", ".jpeg")
+
+        def _find(name: str | None, stem: str) -> Path | None:
+            """Try explicit name first, then stem + each extension."""
+            if name:
+                p = self.system_dir / name
+                if p.is_file():
+                    return p
+            for ext in _exts:
+                p = self.system_dir / (stem + ext)
+                if p.is_file():
+                    return p
+            return None
+
         # Game-level background
         if self.game:
             bg_name = self._game_cfg.get("game", {}).get("background")
-            if bg_name:
-                p = self.system_dir / bg_name
-                if p.is_file():
-                    return p
+            result = _find(bg_name, f"{self.game}_bg") or _find(bg_name, "background")
+            if result:
+                return result
 
         # System-level background
-        sys_bg_name = self._system_cfg.get("system", {}).get("background", "background.png")
-        p = self.system_dir / sys_bg_name
-        if p.is_file():
-            return p
-
-        return None
+        sys_bg_name = self._system_cfg.get("system", {}).get("background")
+        return _find(sys_bg_name, "background")
 
     @property
     def system_name(self) -> str:

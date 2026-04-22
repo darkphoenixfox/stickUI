@@ -1,25 +1,12 @@
-# ControlPad - Global Configuration
-# ============================================================
-
 [general]
-# Default window position and size (overridden by CLI flags)
-xpos   = 100
-ypos   = 100
-width  = 800
-height = 480
-
-# Opacity of the overlay window (0.0 – 1.0)
-opacity = 0.92
-
-# Auto-hide after N seconds of inactivity (0 = never)
+xpos = 100
+ypos = 100
+width = 750
+height = 370
+opacity = 1.0
 auto_hide_seconds = 0
 
 [paths]
-# Root folder that contains one sub-folder per system
 systems_dir = "./systems"
-
-# Path to MAME's config folder (usually contains per-game .cfg files)
 mame_cfg_dir = "d:/mame/cfg"
-
-# Path to MAME's ctrlr folder (controller mapping files)
 mame_ctrlr_dir = "d:/mame/ctrlr"
