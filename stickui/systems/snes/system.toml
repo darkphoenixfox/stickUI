@@ -1,0 +1,62 @@
+# StickUI – System configuration for SNES on an arcade stick
+# 4-way stick + Select + Start + 8 buttons
+# ============================================================
+#
+# Physical layout assumed:
+#
+#   [ Stick ]   [BTN1] [BTN2] [BTN3] [BTN4]
+#               [BTN5] [BTN6] [BTN7] [BTN8]
+#
+#   SNES mapping (top row = shoulder / X row, bottom row = face):
+#
+#   BTN1=Y   BTN2=X   BTN3=L   BTN4=R
+#   BTN5=B   BTN6=A   BTN7=Select  BTN8=Start
+#
+# ============================================================
+
+[system]
+name        = "Super Nintendo"
+description = "Nintendo SNES / Super Famicom"
+
+logo        = "logo.png"
+background  = "background.png"
+
+[display]
+layout_style        = "arcade"
+button_shape        = "circle"
+button_color        = "#8b5cf6"
+button_label_color  = "#ffffff"
+button_border_color = "#a78bfa"
+stick_color         = "#1e1b4b"
+panel_color         = "#111827"
+
+# Directional stick
+[defaults.axes]
+"JOYSTICK_LEFT_UP"    = "Up"
+"JOYSTICK_LEFT_DOWN"  = "Down"
+"JOYSTICK_LEFT_LEFT"  = "Left"
+"JOYSTICK_LEFT_RIGHT" = "Right"
+
+# 8 buttons mapped to SNES layout
+# Top row:    Y  X  L  R
+# Bottom row: B  A  Sel St
+[defaults.buttons]
+"BUTTON1" = "Y"
+"BUTTON2" = "X"
+"BUTTON3" = "L"
+"BUTTON4" = "R"
+"BUTTON5" = "B"
+"BUTTON6" = "A"
+"BUTTON7" = "Select"
+"BUTTON8" = "Start"
+
+[layout]
+# [col, row]  — top row sits above bottom row, left to right
+"BUTTON1" = [0, 0]
+"BUTTON2" = [1, 0]
+"BUTTON3" = [2, 0]
+"BUTTON4" = [3, 0]
+"BUTTON5" = [0, 1]
+"BUTTON6" = [1, 1]
+"BUTTON7" = [2, 1]
+"BUTTON8" = [3, 1]

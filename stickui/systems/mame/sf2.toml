@@ -1,0 +1,36 @@
+# ControlPad – Per-game config for Street Fighter II (sf2)
+# Place this file at: <systems_dir>/mame/sf2.toml
+# ============================================================
+
+[game]
+name        = "Street Fighter II: The World Warrior"
+description = "6-button fighter by Capcom (1991)"
+
+# Optional assets (relative to this file's directory)
+logo        = "sf2.png"
+
+[display]
+# Override system display settings for this game
+button_color        = "#dc2626"
+button_border_color = "#fca5a5"
+
+[buttons]
+# Override labels for this specific game
+"BUTTON1" = "Light\nPunch"
+"BUTTON2" = "Medium\nPunch"
+"BUTTON3" = "Heavy\nPunch"
+"BUTTON4" = "Light\nKick"
+"BUTTON5" = "Medium\nKick"
+"BUTTON6" = "Heavy\nKick"
+"START1"  = "Start"
+"COIN1"   = "Credit"
+
+[layout]
+# Custom 6-button arcade layout
+# Each entry: [column, row] position in the button grid
+"BUTTON1" = [0, 1]
+"BUTTON2" = [1, 1]
+"BUTTON3" = [2, 1]
+"BUTTON4" = [0, 0]
+"BUTTON5" = [1, 0]
+"BUTTON6" = [2, 0]

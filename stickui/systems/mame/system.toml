@@ -1,0 +1,50 @@
+# ControlPad – System configuration for MAME
+# Place this file at: <systems_dir>/mame/system.toml
+# ============================================================
+
+[system]
+name        = "MAME"
+description = "Multiple Arcade Machine Emulator"
+
+# Optional assets (relative to this file's directory)
+logo        = "logo.png"          # shown in corner when no game logo present
+background  = "background.png"    # window background image
+
+[display]
+# Layout style: "arcade", "gamepad", "keyboard", "custom"
+layout_style = "arcade"
+
+# Button shape: "circle", "square", "rounded"
+button_shape = "circle"
+
+# Colour theme for this system's buttons
+button_color        = "#e63946"
+button_label_color  = "#ffffff"
+button_border_color = "#ff6b6b"
+stick_color         = "#2b2d42"
+panel_color         = "#0d0d0d"
+
+[defaults]
+# Default button labels when no game-specific mapping is found.
+# Keys follow MAME's naming convention.
+# These are fallbacks – per-game files will override them.
+
+[defaults.buttons]
+"BUTTON1" = "A"
+"BUTTON2" = "B"
+"BUTTON3" = "C"
+"BUTTON4" = "X"
+"BUTTON5" = "Y"
+"BUTTON6" = "Z"
+"START1"  = "1P Start"
+"COIN1"   = "Insert Coin"
+
+[defaults.axes]
+"JOYSTICK_LEFT_UP"    = "Up"
+"JOYSTICK_LEFT_DOWN"  = "Down"
+"JOYSTICK_LEFT_LEFT"  = "Left"
+"JOYSTICK_LEFT_RIGHT" = "Right"
+
+[paths]
+# If you use a global MAME ctrlr file for this system, name it here
+ctrlr_file = ""
