@@ -1,0 +1,104 @@
+# StickUI – Stick hardware layout config
+# ============================================================
+# Physical layout:
+#
+#   [SELECT] [START]
+#
+#   [ Stick ]    [b1] [b2] [b3] [b4]
+#                [b5] [b6] [b7] [b8]
+#
+# Positions are in pixels relative to the top-left of the window.
+# Window default: 800 x 280
+# ============================================================
+
+[stick]
+name        = "Default 4+8 Arcade Stick"
+description = "Select+Start at top, 4-way stick, 2 rows of 4 buttons"
+author      = ""
+
+# ── Meta buttons (top of panel) ─────────────────────────────
+# Select and Start use the "buttons" array with id "select" / "start"
+# They are drawn smaller at the top
+
+[[buttons]]
+id   = "select"
+x    = 80
+y    = 40
+size = 34
+
+[[buttons]]
+id   = "start"
+x    = 140
+y    = 40
+size = 34
+
+# ── Directional inputs ──────────────────────────────────────
+
+[[directions]]
+id   = "up"
+x    = 100
+y    = 130
+
+[[directions]]
+id   = "down"
+x    = 100
+y    = 200
+
+[[directions]]
+id   = "left"
+x    = 60
+y    = 165
+
+[[directions]]
+id   = "right"
+x    = 140
+y    = 165
+
+# ── Action buttons – Row 1 ──────────────────────────────────
+
+[[buttons]]
+id   = "b1"
+x    = 300
+y    = 140
+
+[[buttons]]
+id   = "b2"
+x    = 380
+y    = 125
+
+[[buttons]]
+id   = "b3"
+x    = 460
+y    = 125
+
+[[buttons]]
+id   = "b4"
+x    = 540
+y    = 140
+
+# ── Action buttons – Row 2 ──────────────────────────────────
+
+[[buttons]]
+id   = "b5"
+x    = 300
+y    = 210
+
+[[buttons]]
+id   = "b6"
+x    = 380
+y    = 225
+
+[[buttons]]
+id   = "b7"
+x    = 460
+y    = 225
+
+[[buttons]]
+id   = "b8"
+x    = 540
+y    = 210
+
+# ── Display ─────────────────────────────────────────────────
+[display]
+arrow_size   = 34
+button_size  = 52

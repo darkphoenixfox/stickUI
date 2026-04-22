@@ -16,7 +16,7 @@ auto_hide_seconds = 0
 
 [paths]
 # Root folder that contains one sub-folder per system
-systems_dir = "./stickui/systems"
+systems_dir = "./systems"
 
 # Path to MAME's config folder (usually contains per-game .cfg files)
 mame_cfg_dir = "d:/mame/cfg"
