@@ -73,7 +73,6 @@ _GLOBAL_DEFAULTS: dict[str, Any] = {
     "paths": {
         "systems_dir": "~/.config/controlpad/systems",
         "mame_cfg_dir": "~/.mame/cfg",
-        "mame_ctrlr_dir": "~/.mame/ctrlr",
     },
 }
 
@@ -112,7 +111,7 @@ class ConfigLoader:
             self._global["paths"].get("systems_dir", "~/.config/controlpad/systems")
         ).expanduser()
 
-        self.system_dir = self.systems_dir / self.system
+        self.system_dir = self._resolve_system_dir()
 
         # Load layers
         self._system_cfg = _load_toml(self.system_dir / "system.toml")
@@ -132,6 +131,56 @@ class ConfigLoader:
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
+
+    def _resolve_system_dir(self) -> Path:
+        """
+        Find the system folder. Checks:
+          1. Exact match: systems_dir / system  (e.g. systems/mame)
+          2. short_name match: scan all subfolders for system.toml with
+             [system] short_name = "<system>"
+        """
+        exact = self.systems_dir / self.system
+        if exact.is_dir():
+            return exact
+
+        # Scan for short_name match
+        if self.systems_dir.is_dir():
+            for subdir in self.systems_dir.iterdir():
+                if not subdir.is_dir():
+                    continue
+                toml_path = subdir / "system.toml"
+                if not toml_path.is_file():
+                    continue
+                try:
+                    cfg = _load_toml(toml_path)
+                    if cfg.get("system", {}).get("short_name", "").lower() == self.system.lower():
+                        return subdir
+                except Exception:
+                    continue
+
+        # Fall back to exact even if it doesn't exist yet
+        return exact
+
+    def _resolve_system_dir(self) -> Path:
+        """
+        Find the system folder by checking each subfolder's system.toml
+        for a matching short_name, falling back to direct name match.
+        """
+        # Direct match first (e.g. --system arcade -> systems/arcade/)
+        direct = self.systems_dir / self.system
+        if direct.is_dir():
+            return direct
+
+        # Search for short_name = "<system>" in any system.toml
+        if self.systems_dir.is_dir():
+            for toml_path in self.systems_dir.glob("*/system.toml"):
+                cfg = _load_toml(toml_path)
+                short = cfg.get("system", {}).get("short_name", "")
+                if short.lower() == self.system.lower():
+                    return toml_path.parent
+
+        # Fallback: return the direct path even if it doesn't exist
+        return direct
 
     def _find_global_config(self) -> Path:
         """Search for config.toml in canonical locations."""
@@ -219,17 +268,13 @@ class ConfigLoader:
     @property
     def logo_path(self) -> Path | None:
         """
-        Returns the best available logo path.
-
-        Priority:
-          1. game.toml [game] logo = "..."  (explicit override)
-          2. logos_dir recursive search: <game>.png / <game>-01.png
-             (Launchbox naming, under system.toml [system] logos_dir)
-          3. <game>.png in the system folder
-          4. system.toml [system] logo = "..."
-          5. logo.png in the system folder
-          6. <s>.png (e.g. mame.png, snes.png)
+        Logo priority:
+          1. systems/<s>/<game>.png  (explicit local override)
+          2. LaunchBox Clear Logo    (from launchbox_dir + platform XML)
+          3. systems/<s>/logo.png or <s>.png  (system fallback)
         """
+        from .launchbox import from_system_cfg
+
         # 1 — explicit game.toml override
         if self.game:
             game_logo_name = self._game_cfg.get("game", {}).get("logo")
@@ -238,79 +283,81 @@ class ConfigLoader:
                 if p.is_file():
                     return p
 
-        # 2 — logos_dir recursive search (Launchbox style)
-        if self.game:
-            logos_dir_str = self._system_cfg.get("system", {}).get("logos_dir", "")
-            if logos_dir_str:
-                logos_dir = Path(logos_dir_str).expanduser()
-                if logos_dir.is_dir():
-                    stems_lower = {
-                        self.game.lower(),
-                        f"{self.game.lower()}-01",
-                        f"{self.game.lower()}-02",
-                    }
-                    exts = {".png", ".jpg", ".jpeg"}
-                    for p in sorted(logos_dir.rglob("*")):
-                        if p.is_file() and p.suffix.lower() in exts:
-                            if p.stem.lower() in stems_lower:
-                                return p
-
-        # 3 — <game>.png in system folder
+        # 1b — <game>.png directly in system folder
         if self.game:
             p = self.system_dir / f"{self.game}.png"
             if p.is_file():
                 return p
 
-        # 4 — explicit system logo
+        # 2 — LaunchBox Clear Logo
+        if self.game:
+            lb = from_system_cfg(self._system_cfg, self.launchbox_dir)
+            if lb:
+                p = lb.logo(self.game)
+                if p:
+                    return p
+
+        # 3 — explicit system logo from system.toml
         sys_logo_name = self._system_cfg.get("system", {}).get("logo")
         if sys_logo_name:
             p = self.system_dir / sys_logo_name
             if p.is_file():
                 return p
 
-        # 5 — generic logo.png
-        p = self.system_dir / "logo.png"
-        if p.is_file():
-            return p
-
-        # 6 — <s>.png (e.g. mame.png, snes.png)
-        p = self.system_dir / f"{self.system}.png"
-        if p.is_file():
-            return p
+        # 3b — generic logo.png / <s>.png
+        for name in ["logo.png", f"{self.system}.png"]:
+            p = self.system_dir / name
+            if p.is_file():
+                return p
 
         return None
+
 
     @property
     def background_path(self) -> Path | None:
         """
-        Returns background image path (game bg > system bg > None).
-        Supports .png, .jpg, .jpeg — explicit config value is tried first,
-        then each extension is tried automatically if no config value given.
+        Background priority:
+          1. game.toml [game] background (explicit)
+          2. <game>_bg.png/jpg in system folder
+          3. LaunchBox Fanart - Background
+          4. system.toml [system] background / background.png/jpg
+          5. gradient fallback (handled in UI)
         """
-        _exts = (".png", ".jpg", ".jpeg")
+        from .launchbox import from_system_cfg
 
-        def _find(name: str | None, stem: str) -> Path | None:
-            """Try explicit name first, then stem + each extension."""
+        exts = [".png", ".jpg", ".jpeg"]
+
+        def _find(name: str | None, *fallback_stems: str) -> Path | None:
+            candidates = []
             if name:
-                p = self.system_dir / name
-                if p.is_file():
-                    return p
-            for ext in _exts:
-                p = self.system_dir / (stem + ext)
+                candidates.append(self.system_dir / name)
+            for stem in fallback_stems:
+                for ext in exts:
+                    candidates.append(self.system_dir / f"{stem}{ext}")
+            for p in candidates:
                 if p.is_file():
                     return p
             return None
 
-        # Game-level background
+        # 1 & 2 — game-level
         if self.game:
             bg_name = self._game_cfg.get("game", {}).get("background")
-            result = _find(bg_name, f"{self.game}_bg") or _find(bg_name, "background")
+            result = _find(bg_name, f"{self.game}_bg")
             if result:
                 return result
 
-        # System-level background
+        # 3 — LaunchBox Fanart Background
+        if self.game:
+            lb = from_system_cfg(self._system_cfg, self.launchbox_dir)
+            if lb:
+                p = lb.background(self.game)
+                if p:
+                    return p
+
+        # 4 — system-level
         sys_bg_name = self._system_cfg.get("system", {}).get("background")
         return _find(sys_bg_name, "background")
+
 
     @property
     def system_name(self) -> str:
@@ -318,14 +365,50 @@ class ConfigLoader:
 
     @property
     def game_name(self) -> str:
-        if self.game:
-            return self._game_cfg.get("game", {}).get("name", self.game)
-        return ""
+        if not self.game:
+            return ""
+        # Priority: game.toml name > LaunchBox title > rom name
+        toml_name = self._game_cfg.get("game", {}).get("name", "")
+        if toml_name:
+            return toml_name
+        try:
+            from .launchbox import from_system_cfg
+            lb = from_system_cfg(self._system_cfg, self.launchbox_dir)
+            if lb:
+                lb_title = lb.title(self.game)
+                if lb_title:
+                    return lb_title
+        except Exception:
+            pass
+        return self.game
 
     @property
     def layout_style(self) -> str:
         """One of: arcade, gamepad, keyboard, custom."""
         return self.display.get("layout_style", "gamepad")
+
+    @property
+    def background_dim(self) -> float:
+        """
+        Darkening overlay opacity for background images (0.0–1.0).
+        Priority: game.toml > system.toml > config.toml > default (0.55)
+        """
+        # game.toml [display]
+        game_val = self._game_cfg.get("display", {}).get("background_dim")
+        if game_val is not None:
+            return max(0.0, min(1.0, float(game_val)))
+
+        # system.toml [display]
+        sys_val = self._system_cfg.get("display", {}).get("background_dim")
+        if sys_val is not None:
+            return max(0.0, min(1.0, float(sys_val)))
+
+        # config.toml [general]
+        global_val = self._global.get("general", {}).get("background_dim")
+        if global_val is not None:
+            return max(0.0, min(1.0, float(global_val)))
+
+        return 0.55   # default: moderate darkening
 
     @property
     def mame_cfg_dir(self) -> Path:
@@ -350,3 +433,43 @@ class ConfigLoader:
             return None
         p = Path(val).expanduser()
         return p if p.is_file() else None
+
+    @property
+    def launchbox_dir(self) -> Path | None:
+        """Path to LaunchBox root folder, or None if not configured."""
+        val = self._global["paths"].get("launchbox_dir", "")
+        if not val:
+            return None
+        p = Path(val).expanduser()
+        return p if p.is_dir() else None
+
+    @property
+    def launchbox_platform(self):
+        """
+        Return a LaunchBoxPlatform if launchbox_folder is set and valid,
+        else None. Result is cached on the instance.
+        """
+        if hasattr(self, "_lb_platform_cache"):
+            return self._lb_platform_cache
+
+        lb_str = self._system_cfg.get("system", {}).get("launchbox_folder", "")
+        if not lb_str:
+            self._lb_platform_cache = None
+            return None
+
+        lb_folder = Path(lb_str).expanduser()
+        try:
+            from .launchbox import is_valid_launchbox, load_platform
+            if not is_valid_launchbox(lb_folder):
+                self._lb_platform_cache = None
+                return None
+            platform_name = self._system_cfg.get("system", {}).get(
+                "launchbox_platform",
+                self._system_cfg.get("system", {}).get("name", self.system)
+            )
+            self._lb_platform_cache = load_platform(lb_folder, platform_name)
+        except Exception as e:
+            print(f"[stickui] LaunchBox error: {e}")
+            self._lb_platform_cache = None
+
+        return self._lb_platform_cache

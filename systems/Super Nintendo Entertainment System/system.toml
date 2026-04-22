@@ -1,0 +1,47 @@
+# StickUI – System configuration for SNES
+# Folder: systems/Super Nintendo Entertainment System/
+# ============================================================
+
+[system]
+name               = "Super Nintendo"
+short_name         = "snes"        # use --system snes to load this folder
+description        = "Nintendo SNES / Super Famicom"
+logo               = "logo.png"
+background         = "background.png"
+stick              = "default"
+
+# LaunchBox integration
+launchbox_platform = 'Super Nintendo Entertainment System'
+
+[display]
+panel_color         = "#111827"
+stick_color         = "#1e1b4b"
+button_color        = "#888888"
+button_label_color  = "#ffffff"
+button_border_color = "#aaaaaa"
+
+[directions]
+up    = "Up"
+down  = "Down"
+left  = "Left"
+right = "Right"
+
+[buttons]
+select = "Select"
+start  = "Start"
+b1 = "Y"
+b2 = "X"
+b3 = "L"
+b4 = "R"
+b5 = "B"
+b6 = "A"
+b7 = ""
+b8 = ""
+
+[button_colors]
+b1 = { color = "#d4a017", border = "#f0c040" }
+b2 = { color = "#5ba4cf", border = "#89c4e8" }
+b3 = { color = "#555555", border = "#888888" }
+b4 = { color = "#555555", border = "#888888" }
+b5 = { color = "#2e8b3e", border = "#4ab85e" }
+b6 = { color = "#c0392b", border = "#e05040" }

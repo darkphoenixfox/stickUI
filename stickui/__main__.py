@@ -47,13 +47,24 @@ def build(args: argparse.Namespace, cli_args: dict):
         args.stick
         or cfg._system_cfg.get("system", {}).get("stick", "default")
     )
+    # Pass rom_name for command.dat lookup when system is mame-based.
+    # Check both the --system arg and the short_name in system.toml.
+    short_name = cfg._system_cfg.get("system", {}).get("short_name", "").lower()
+    is_mame = args.system.lower() in ("mame", "arcade") or short_name in ("mame", "arcade")
+
+    if is_mame:
+        if cfg.command_dat_path:
+            print(f"[stickui] command.dat: {cfg.command_dat_path}")
+        else:
+            print("[stickui] command.dat: not configured (set command_dat in config.toml)")
+
     stick_layout = load_stick_layout(
         stick_name  = stick_name,
         sticks_dir  = Path("sticks"),
         system_cfg  = cfg._system_cfg,
         game_cfg    = cfg._game_cfg,
-        rom_name    = args.game if args.system.lower() == "mame" else None,
-        command_dat = cfg.command_dat_path,
+        rom_name    = args.game if is_mame else None,
+        command_dat = cfg.command_dat_path if is_mame else None,
     )
     return cfg, layout, stick_layout
 

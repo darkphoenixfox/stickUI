@@ -1,38 +1,42 @@
 """
 stickui.ui.background
 ~~~~~~~~~~~~~~~~~~~~~
-A QWidget subclass that paints a background image scaled to cover
-the full widget area (like CSS background-size: cover).
+Cover-scaled background widget with configurable darkening overlay.
 
-The image is scaled so the shorter dimension fills the widget,
-then centred — no empty borders, no distortion.
-Falls back to a gradient if no image is provided.
+The darkening is a flat black overlay with configurable opacity,
+applied on top of the image before the vignette.
+
+Config key: background_dim  (float 0.0–1.0, default 0.55)
+  0.0 = no darkening (original image brightness)
+  0.55 = moderate darkening (default, good for most LaunchBox fanart)
+  1.0 = fully black
+
+Priority: game.toml > system.toml > config.toml > built-in default
+The resolved value is passed in via set_dim().
 """
 
 from __future__ import annotations
 
 from typing import Optional
 
-from PyQt6.QtCore import Qt, QRect, QRectF
+from PyQt6.QtCore import Qt, QRect
 from PyQt6.QtGui import QColor, QLinearGradient, QPainter, QPixmap
 from PyQt6.QtWidgets import QWidget
 
 
 class BackgroundWidget(QWidget):
-    """
-    Drop-in replacement for a plain QWidget that paints a cover-scaled
-    background image (or gradient fallback) before child widgets are drawn.
-    """
 
     def __init__(
         self,
         parent=None,
         image_path: Optional[str] = None,
         panel_color: str = "#0d0d0d",
+        dim: float = 0.55,
     ) -> None:
         super().__init__(parent)
         self._pixmap: Optional[QPixmap] = None
         self._panel_color = panel_color
+        self._dim = max(0.0, min(1.0, dim))
         self.set_image(image_path)
 
     def set_image(self, image_path: Optional[str]) -> None:
@@ -47,10 +51,13 @@ class BackgroundWidget(QWidget):
         self._panel_color = color
         self.update()
 
+    def set_dim(self, dim: float) -> None:
+        self._dim = max(0.0, min(1.0, dim))
+        self.update()
+
     def paintEvent(self, event) -> None:
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-
         w, h = self.width(), self.height()
 
         if self._pixmap and not self._pixmap.isNull():
@@ -59,36 +66,33 @@ class BackgroundWidget(QWidget):
             self._paint_gradient(p, w, h)
 
         p.end()
-        # Let child widgets paint on top
         super().paintEvent(event)
 
     def _paint_cover(self, p: QPainter, w: int, h: int) -> None:
-        """Scale image to cover the widget (like CSS cover), then centre."""
         img_w = self._pixmap.width()
         img_h = self._pixmap.height()
 
-        # Scale factor: the larger ratio wins so both sides are covered
-        scale = max(w / img_w, h / img_h)
-
+        scale    = max(w / img_w, h / img_h)
         scaled_w = int(img_w * scale)
         scaled_h = int(img_h * scale)
-
-        # Centre the scaled image
         ox = (w - scaled_w) // 2
         oy = (h - scaled_h) // 2
 
-        target = QRect(ox, oy, scaled_w, scaled_h)
-        p.drawPixmap(target, self._pixmap)
+        p.drawPixmap(QRect(ox, oy, scaled_w, scaled_h), self._pixmap)
 
-        # Subtle dark vignette so UI elements remain readable
+        # Flat darkening overlay
+        if self._dim > 0.0:
+            alpha = int(self._dim * 255)
+            p.fillRect(0, 0, w, h, QColor(0, 0, 0, alpha))
+
+        # Vignette on top of the darkening
         vignette = QLinearGradient(0, 0, 0, h)
-        vignette.setColorAt(0, QColor(0, 0, 0, 120))
-        vignette.setColorAt(0.4, QColor(0, 0, 0, 40))
-        vignette.setColorAt(1, QColor(0, 0, 0, 140))
+        vignette.setColorAt(0,   QColor(0, 0, 0, 80))
+        vignette.setColorAt(0.4, QColor(0, 0, 0, 0))
+        vignette.setColorAt(1,   QColor(0, 0, 0, 80))
         p.fillRect(0, 0, w, h, vignette)
 
     def _paint_gradient(self, p: QPainter, w: int, h: int) -> None:
-        """Fallback: diagonal gradient based on panel_color."""
         c = QColor(self._panel_color)
         lighter = c.lighter(140)
         grad = QLinearGradient(0, 0, w, h)

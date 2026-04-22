@@ -58,7 +58,7 @@ def _save_toml(path: Path, data: dict) -> None:
     try:
         lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
         general = data.get("general", {})
-        keys = {"xpos", "ypos", "width", "height", "opacity", "auto_hide_seconds"}
+        keys = {"xpos", "ypos", "width", "height", "opacity", "auto_hide_seconds", "background_dim"}
         in_general = False
         out = []
         for line in lines:
@@ -321,6 +321,52 @@ class SpinRow(QWidget):
 
 
 # ---------------------------------------------------------------------------
+# Helper: save a value to [display] section of a toml file
+# ---------------------------------------------------------------------------
+
+def _save_display_key(path: Path, key: str, value) -> None:
+    """Patch or append a key in the [display] section of a toml file."""
+    if not path.is_file():
+        return
+
+    if _HAS_TOMLI_W:
+        raw = _load_toml(path)
+        raw.setdefault("display", {})[key] = value
+        with path.open("wb") as f:
+            tomli_w.dump(raw, f)
+        return
+
+    # Fallback: line-by-line patch
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+        in_display = False
+        found = False
+        out = []
+        for line in lines:
+            s = line.strip()
+            if s == "[display]":
+                in_display = True
+                out.append(line)
+                continue
+            if s.startswith("[") and s != "[display]":
+                # If we were in [display] and never found the key, append it
+                if in_display and not found:
+                    out.append("{} = {:.2f}\n".format(key, value))
+                    found = True
+                in_display = False
+            if in_display and (s.startswith(key + " ") or s.startswith(key + "=")):
+                line = "{} = {:.2f}\n".format(key, value)
+                found = True
+            out.append(line)
+        # If [display] was last section and key wasn't found
+        if in_display and not found:
+            out.append("{} = {:.2f}\n".format(key, value))
+        path.write_text("".join(out), encoding="utf-8")
+    except Exception as e:
+        print(f"[stickui] Could not save {key} to {path}: {e}")
+
+
+# ---------------------------------------------------------------------------
 # Settings dialog
 # ---------------------------------------------------------------------------
 
@@ -332,12 +378,17 @@ class SettingsDialog(QDialog):
         current_geometry,       # QRect
         current_opacity: float,
         on_apply: Callable[[dict], None],
+        cfg=None,               # ConfigLoader — for background_dim resolution
         parent=None,
     ) -> None:
         super().__init__(parent)
         self._config_path    = config_path
         self._on_apply       = on_apply
         self._live_geometry  = current_geometry
+        self._cfg            = cfg
+
+        # Resolve which file owns background_dim and its current value
+        self._dim_path, self._dim_section = self._resolve_dim_owner()
 
         self.setWindowTitle("StickUI – Settings")
         self.setWindowFlags(
@@ -391,6 +442,22 @@ class SettingsDialog(QDialog):
             fmt="{:.0f}",
         )
         av.addWidget(self._opacity)
+
+        # Background dim — current value from cfg, saved to the right file
+        current_dim = cfg.background_dim if cfg else 0.55
+        dim_lbl = QLabel(f"Background dim  →  {self._dim_path.name}  [{self._dim_section}]")
+        dim_lbl.setStyleSheet("color: rgba(180,180,220,0.6); font-size: 9px; background: transparent;")
+        av.addWidget(dim_lbl)
+
+        self._dim = SliderRow(
+            label="Dim",
+            min_val=0, max_val=100,
+            value=round(current_dim * 100),
+            scale=1,
+            suffix="%",
+            fmt="{:.0f}",
+        )
+        av.addWidget(self._dim)
         root.addWidget(appear_box)
 
         # ── Auto-hide ───────────────────────────────────────────────────────
@@ -434,6 +501,24 @@ class SettingsDialog(QDialog):
 
     # ── Helpers ──────────────────────────────────────────────────────────────
 
+    def _resolve_dim_owner(self):
+        """
+        Return (path, section) of the file that should receive background_dim.
+        Priority: game.toml [display] > system.toml [display] > config.toml [general]
+        """
+        if self._cfg:
+            # Game toml owns it if game config exists
+            if self._cfg.game and self._cfg._game_cfg:
+                game_toml = self._cfg.system_dir_path / f"{self._cfg.game}.toml"
+                if game_toml.is_file():
+                    return game_toml, "display"
+            # System toml is next
+            system_toml = self._cfg.system_dir_path / "system.toml"
+            if system_toml.is_file():
+                return system_toml, "display"
+        # Global config fallback
+        return self._config_path, "general"
+
     def _capture(self) -> None:
         g = self._live_geometry
         self._xpos.set_value(g.x())
@@ -454,10 +539,26 @@ class SettingsDialog(QDialog):
             ),
         }
 
+    def _collect_dim(self) -> float:
+        return round(self._dim.value() / 100, 2)
+
     def _apply(self) -> None:
         values = self._collect()
+        dim    = self._collect_dim()
+
+        # Save window settings to config.toml [general]
         raw = _load_toml(self._config_path)
         raw.setdefault("general", {}).update(values)
         _save_toml(self._config_path, raw)
+
+        # Save background_dim to the correct file and section
+        if self._dim_section == "general":
+            raw2 = _load_toml(self._dim_path)
+            raw2.setdefault("general", {})["background_dim"] = dim
+            _save_toml(self._dim_path, raw2)
+        else:
+            _save_display_key(self._dim_path, "background_dim", dim)
+
+        values["background_dim"] = dim
         self._on_apply(values)
         self.accept()

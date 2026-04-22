@@ -101,6 +101,7 @@ class OverlayWindow(QMainWindow):
         bg_path = str(lr.background_path) if lr.background_path else None
         self._bg.set_image(bg_path)
         self._bg.set_panel_color(lr.panel_color)
+        self._bg.set_dim(self._cfg.background_dim)
         self._bg.setStyleSheet("QWidget#centralWidget { border-radius: 14px; }")
 
         root = QVBoxLayout(self._bg)
@@ -179,6 +180,8 @@ class OverlayWindow(QMainWindow):
                 values["width"], values["height"],
             )
             self.setWindowOpacity(values["opacity"])
+            if "background_dim" in values:
+                self._bg.set_dim(values["background_dim"])
             # Trigger a full reload so the watcher picks up the new config
             if self._reload_callback:
                 self._reload_callback()
@@ -188,6 +191,7 @@ class OverlayWindow(QMainWindow):
             current_geometry = self.geometry(),
             current_opacity  = self.windowOpacity(),
             on_apply         = on_apply,
+            cfg              = self._cfg,
             parent           = self,
         )
         dlg.exec()
