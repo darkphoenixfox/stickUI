@@ -219,18 +219,36 @@ class ConfigLoader:
     @property
     def logo_path(self) -> Path | None:
         """
-        Returns the best available logo path (game > system > None).
+        Returns the best available logo path.
+
+        Priority:
+          1. game.toml [game] logo = "..."
+          2. <game>.png  (implicit, same name as rom)
+          3. system.toml [system] logo = "..."
+          4. logo.png    (generic fallback filename)
+          5. <system>.png (e.g. mame.png, snes.png)
         """
-        # Game logo
+        # 1 & 2 — game-level
         if self.game:
             game_logo_name = self._game_cfg.get("game", {}).get("logo", f"{self.game}.png")
             p = self.system_dir / game_logo_name
             if p.is_file():
                 return p
 
-        # System logo
-        sys_logo_name = self._system_cfg.get("system", {}).get("logo", "logo.png")
-        p = self.system_dir / sys_logo_name
+        # 3 — explicit system logo from system.toml
+        sys_logo_name = self._system_cfg.get("system", {}).get("logo")
+        if sys_logo_name:
+            p = self.system_dir / sys_logo_name
+            if p.is_file():
+                return p
+
+        # 4 — generic logo.png
+        p = self.system_dir / "logo.png"
+        if p.is_file():
+            return p
+
+        # 5 — <system>.png (e.g. mame.png, snes.png)
+        p = self.system_dir / f"{self.system}.png"
         if p.is_file():
             return p
 

@@ -13,6 +13,14 @@ background  = "background.png"    # window background image
 [display]
 # Layout style: "arcade", "gamepad", "keyboard", "custom"
 layout_style = "arcade"
+logo_height  = 128     # how tall to scale it
+logo_y       = 8      # px from top of window
+logo_x       = -1     # -1 = auto right-align, or set explicit px from left
+logo_margin  = 12     # margin used when auto right-aligning
+logo_opacity = 0.9    # 0.0 – 1.0
+show_system_name  = true    # show system name as subtitle below game name
+title_font_size   = 14      # px
+subtitle_font_size = 9      # px
 
 # Button shape: "circle", "square", "rounded"
 button_shape = "circle"
